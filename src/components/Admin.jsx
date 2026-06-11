@@ -1,5 +1,7 @@
 import React, { useState } from 'react'
 import { useApp } from '../context/AppContext'
+import ProfileForm from './ProfileForm'
+import { postedByLabel } from '../data/profiles'
 
 export default function Admin({ onToast }) {
   const { currentUser } = useApp()
@@ -68,80 +70,34 @@ function Overview() {
 
 function AddProfile({ onToast, onDone }) {
   const { addProfile } = useApp()
-  const empty = {
-    name: '', age: '', gender: 'Female', height: '', city: '', subCaste: '', gotra: 'Suryavanshi',
-    education: '', profession: '', income: '', family: '', about: '',
-    diet: 'Vegetarian', maritalStatus: 'Never Married', horoscope: 'Available on request', photo: '',
-  }
-  const [form, setForm] = useState(empty)
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
-
-  const submit = () => {
-    if (!form.name || !form.age || !form.city) { onToast('Name, age and city are required'); return }
-    const photo = form.photo || `https://randomuser.me/api/portraits/${form.gender === 'Female' ? 'women' : 'men'}/${Math.floor(Math.random() * 90)}.jpg`
-    addProfile({ ...form, age: Number(form.age), photo })
-    onToast(`Profile for ${form.name} added ✦`)
-    setForm(empty)
-    onDone()
-  }
-
   return (
-    <div style={{ maxWidth: 680 }}>
-      <div className="form-grid">
-        <div className="form-row">
-          <div><label>Full name *</label><input value={form.name} onChange={set('name')} /></div>
-          <div><label>Age *</label><input type="number" min="18" value={form.age} onChange={set('age')} /></div>
-        </div>
-        <div className="form-row">
-          <div><label>Gender</label>
-            <select value={form.gender} onChange={set('gender')}><option>Female</option><option>Male</option></select>
-          </div>
-          <div><label>Height</label><input placeholder={`5'6"`} value={form.height} onChange={set('height')} /></div>
-        </div>
-        <div className="form-row">
-          <div><label>City *</label><input placeholder="Hyderabad, Telangana" value={form.city} onChange={set('city')} /></div>
-          <div><label>Sub-caste</label><input placeholder="Rajput / Chauhan / Rathore…" value={form.subCaste} onChange={set('subCaste')} /></div>
-        </div>
-        <div className="form-row">
-          <div><label>Gotra</label>
-            <select value={form.gotra} onChange={set('gotra')}>
-              <option>Suryavanshi</option><option>Chandravanshi</option><option>Agnivanshi</option><option>Nagvanshi</option>
-            </select>
-          </div>
-          <div><label>Diet</label>
-            <select value={form.diet} onChange={set('diet')}>
-              <option>Vegetarian</option><option>Non-Vegetarian</option><option>Eggetarian</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-row">
-          <div><label>Education</label><input value={form.education} onChange={set('education')} /></div>
-          <div><label>Profession</label><input value={form.profession} onChange={set('profession')} /></div>
-        </div>
-        <div className="form-row">
-          <div><label>Annual income</label><input placeholder="₹12 LPA" value={form.income} onChange={set('income')} /></div>
-          <div><label>Photo URL (optional)</label><input placeholder="Leave blank for auto photo" value={form.photo} onChange={set('photo')} /></div>
-        </div>
-        <div><label>Family details</label><input value={form.family} onChange={set('family')} /></div>
-        <div><label>About</label><textarea rows="3" value={form.about} onChange={set('about')} /></div>
-        <button className="btn btn-primary" onClick={submit}>Add profile</button>
-      </div>
-    </div>
+    <ProfileForm onToast={onToast} submitLabel="Add profile (verified)"
+      onSubmit={(data) => {
+        addProfile(data, { byAdmin: true })
+        onToast(`Profile for ${data.name} added & verified ✦`)
+        onDone()
+      }} />
   )
 }
 
 function ProfilesTable({ onToast }) {
-  const { profiles, removeProfile } = useApp()
+  const { profiles, removeProfile, verifyProfile } = useApp()
   return (
     <div style={{ overflowX: 'auto' }}>
       <table className="admin-table">
-        <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>City</th><th>Sub-caste</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Name</th><th>Age</th><th>City</th><th>Posted by</th><th>Status</th><th></th></tr></thead>
         <tbody>
           {profiles.map(p => (
             <tr key={p.id}>
-              <td>{p.id}</td><td>{p.name}</td><td>{p.age}</td><td>{p.city}</td><td>{p.subCaste}</td>
+              <td>{p.id}</td><td>{p.name}</td><td>{p.age}</td><td>{p.city}</td>
+              <td>{postedByLabel(p.relation).replace('Posted by ', '')}</td>
               <td>{p.verified ? <span className="pill pill-success">Verified</span> : <span className="pill pill-pending">Pending</span>}</td>
-              <td><button className="btn btn-ghost btn-sm" onClick={() => { removeProfile(p.id); onToast('Profile removed') }}>Remove</button></td>
+              <td style={{ display: 'flex', gap: 6 }}>
+                {!p.verified && (
+                  <button className="btn btn-primary btn-sm" onClick={() => { verifyProfile(p.id); onToast(`${p.name} verified ✓`) }}>Verify</button>
+                )}
+                <button className="btn btn-ghost btn-sm" onClick={() => { removeProfile(p.id); onToast('Profile removed') }}>Remove</button>
+              </td>
             </tr>
           ))}
         </tbody>

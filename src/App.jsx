@@ -5,6 +5,7 @@ import Hero from './components/Hero'
 import Matches from './components/Matches'
 import Plans from './components/Plans'
 import Admin from './components/Admin'
+import MyProfiles from './components/MyProfiles'
 import AuthModal from './components/Auth'
 
 export default function App() {
@@ -29,6 +30,7 @@ export default function App() {
       {page === 'home' && <Hero setPage={setPage} onLoginClick={() => setShowAuth(true)} />}
       {page === 'matches' && <Matches setPage={setPage} onLoginClick={() => setShowAuth(true)} onToast={onToast} />}
       {page === 'plans' && <Plans onLoginClick={() => setShowAuth(true)} onToast={onToast} />}
+      {page === 'myprofiles' && <MyProfiles onToast={onToast} onLoginClick={() => setShowAuth(true)} />}
       {page === 'admin' && <Admin onToast={onToast} />}
 
       <footer className="footer">

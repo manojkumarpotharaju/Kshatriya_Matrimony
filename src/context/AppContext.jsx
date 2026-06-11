@@ -92,12 +92,23 @@ export function AppProvider({ children }) {
   const canChat = !!(currentUser?.isAdmin || userPlan?.chat)
   const canCall = !!(currentUser?.isAdmin || userPlan?.call)
 
-  // ---- Admin: profiles & offers ----
-  const addProfile = (profile) => {
-    const id = 'KM' + (1000 + profiles.length + 1)
-    setProfiles(prev => [{ ...profile, id, verified: true, premium: false }, ...prev])
+  // ---- Profiles (admin + members) & offers ----
+  const addProfile = (profile, { byAdmin = false } = {}) => {
+    const id = 'KM' + Date.now().toString().slice(-6)
+    const owner = byAdmin ? 'ADMIN' : (currentUser?.id || 'GUEST')
+    const newProfile = {
+      ...profile, id,
+      createdBy: owner,
+      verified: byAdmin, // member-added profiles await admin verification
+      premium: false,
+    }
+    setProfiles(prev => [newProfile, ...prev])
+    return newProfile
   }
+  const updateProfile = (id, patch) => setProfiles(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))
+  const verifyProfile = (id) => updateProfile(id, { verified: true })
   const removeProfile = (id) => setProfiles(prev => prev.filter(p => p.id !== id))
+  const myProfiles = currentUser ? profiles.filter(p => p.createdBy === currentUser.id) : []
 
   const addOffer = (offer) => setOffers(prev => [{ ...offer, id: 'OF' + Date.now(), active: true }, ...prev])
   const toggleOffer = (id) => setOffers(prev => prev.map(o => o.id === id ? { ...o, active: !o.active } : o))
@@ -114,7 +125,8 @@ export function AppProvider({ children }) {
     profiles, users, currentUser, offers, payments, interests, activeOffer,
     PLANS, ADMIN_CREDENTIALS,
     register, login, logout, subscribe, approveCashPayment,
-    addProfile, removeProfile, addOffer, toggleOffer, removeOffer,
+    addProfile, updateProfile, verifyProfile, removeProfile, myProfiles,
+    addOffer, toggleOffer, removeOffer,
     sendInterest, hasInterest,
     userPlan, canChat, canCall,
   }

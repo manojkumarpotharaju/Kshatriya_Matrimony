@@ -301,6 +301,17 @@ img { display: block; }
 .footer ul { list-style: none; display: grid; gap: 6px; }
 .footer-bottom { border-top: 1px solid rgba(251,246,236,.15); padding-top: 18px; font-size: 13px; text-align: center; }
 
+/* ============ Chips (interests) ============ */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.chip {
+  border: 1.5px solid #ddd0b6; background: #fff; border-radius: 999px;
+  padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--ink-soft);
+  transition: all .15s;
+}
+.chip:hover { border-color: var(--gold); color: var(--gold); }
+.chip-active { background: var(--maroon); border-color: var(--maroon); color: var(--ivory); }
+.chip-static { cursor: default; background: rgba(201,150,46,.1); border-color: var(--gold-soft); color: var(--maroon); }
+
 /* ============ Toast ============ */
 .toast {
   position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);

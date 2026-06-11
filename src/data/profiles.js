@@ -1,5 +1,5 @@
-// Seed profiles shown on first load. Admin-added profiles are merged from localStorage.
-export const SEED_PROFILES = [
+// Seed profiles shown on first load. Admin/user-added profiles are merged from localStorage.
+const RAW_PROFILES = [
   {
     id: 'KM1001', name: 'Aaradhya Singh', age: 26, gender: 'Female', height: "5'4\"",
     city: 'Jaipur, Rajasthan', subCaste: 'Rajput', gotra: 'Suryavanshi',
@@ -109,6 +109,92 @@ export const SEED_PROFILES = [
     photo: 'https://randomuser.me/api/portraits/men/91.jpg', verified: true, premium: true,
   },
 ]
+
+// ---- Reference data for forms & filters ----
+export const CITIES = [
+  { name: 'Hyderabad, Telangana', lat: 17.385, lng: 78.4867 },
+  { name: 'Warangal, Telangana', lat: 17.9689, lng: 79.5941 },
+  { name: 'Jaipur, Rajasthan', lat: 26.9124, lng: 75.7873 },
+  { name: 'Udaipur, Rajasthan', lat: 24.5854, lng: 73.7125 },
+  { name: 'Jodhpur, Rajasthan', lat: 26.2389, lng: 73.0243 },
+  { name: 'Kota, Rajasthan', lat: 25.2138, lng: 75.8648 },
+  { name: 'Indore, Madhya Pradesh', lat: 22.7196, lng: 75.8577 },
+  { name: 'Gwalior, Madhya Pradesh', lat: 26.2183, lng: 78.1828 },
+  { name: 'Bhopal, Madhya Pradesh', lat: 23.2599, lng: 77.4126 },
+  { name: 'Ahmedabad, Gujarat', lat: 23.0225, lng: 72.5714 },
+  { name: 'Vadodara, Gujarat', lat: 22.3072, lng: 73.1812 },
+  { name: 'Rajkot, Gujarat', lat: 22.3039, lng: 70.8022 },
+  { name: 'Surat, Gujarat', lat: 21.1702, lng: 72.8311 },
+  { name: 'Pune, Maharashtra', lat: 18.5204, lng: 73.8567 },
+  { name: 'Mumbai, Maharashtra', lat: 19.076, lng: 72.8777 },
+  { name: 'Nagpur, Maharashtra', lat: 21.1458, lng: 79.0882 },
+  { name: 'Delhi NCR', lat: 28.6139, lng: 77.209 },
+  { name: 'Lucknow, Uttar Pradesh', lat: 26.8467, lng: 80.9462 },
+  { name: 'Bengaluru, Karnataka', lat: 12.9716, lng: 77.5946 },
+  { name: 'Chennai, Tamil Nadu', lat: 13.0827, lng: 80.2707 },
+  { name: 'Visakhapatnam, Andhra Pradesh', lat: 17.6868, lng: 83.2185 },
+]
+
+export const cityCoords = (cityName) => {
+  if (!cityName) return null
+  const exact = CITIES.find(c => c.name === cityName)
+  if (exact) return exact
+  const first = cityName.split(',')[0].trim().toLowerCase()
+  return CITIES.find(c => c.name.toLowerCase().startsWith(first)) || null
+}
+
+// Haversine distance in km
+export const distanceKm = (a, b) => {
+  if (!a || !b) return null
+  const R = 6371, rad = (d) => (d * Math.PI) / 180
+  const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng)
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2
+  return Math.round(2 * R * Math.asin(Math.sqrt(h)))
+}
+
+export const INTERESTS = [
+  'Travel', 'Music', 'Fitness', 'Reading', 'Cooking', 'Dance', 'Cricket',
+  'Trekking', 'Photography', 'Movies', 'Yoga', 'Gardening', 'Art & Sketching',
+  'Spirituality', 'Horse Riding', 'Chess',
+]
+
+export const PROFESSION_CATEGORIES = [
+  'IT / Software', 'Doctor / Medical', 'Engineer', 'CA / Finance', 'Lawyer',
+  'Business / Entrepreneur', 'Government / Civil Services', 'Defence',
+  'Architect / Designer', 'Teacher / Professor', 'Research / Science', 'Other',
+]
+
+export const RELATIONS = ['Myself', 'Son', 'Daughter', 'Brother', 'Sister', 'Relative', 'Friend']
+
+export const postedByLabel = (relation) => {
+  if (!relation || relation === 'Myself') return 'Posted by Self'
+  if (relation === 'Son' || relation === 'Daughter') return 'Posted by Parent'
+  if (relation === 'Brother' || relation === 'Sister') return 'Posted by Sibling'
+  return `Posted by ${relation}`
+}
+
+// Extra fields for the seed profiles
+const EXTRA = {
+  KM1001: { professionCategory: 'IT / Software', interests: ['Dance', 'Travel', 'Reading'], relation: 'Daughter' },
+  KM1002: { professionCategory: 'IT / Software', interests: ['Fitness', 'Horse Riding', 'Cricket'], relation: 'Myself' },
+  KM1003: { professionCategory: 'Doctor / Medical', interests: ['Art & Sketching', 'Music', 'Yoga'], relation: 'Daughter' },
+  KM1004: { professionCategory: 'CA / Finance', interests: ['Cricket', 'Travel', 'Movies'], relation: 'Myself' },
+  KM1005: { professionCategory: 'Architect / Designer', interests: ['Photography', 'Travel', 'Cooking'], relation: 'Sister' },
+  KM1006: { professionCategory: 'IT / Software', interests: ['Trekking', 'Reading', 'Travel'], relation: 'Myself' },
+  KM1007: { professionCategory: 'Research / Science', interests: ['Cooking', 'Gardening', 'Spirituality'], relation: 'Daughter' },
+  KM1008: { professionCategory: 'Defence', interests: ['Fitness', 'Trekking', 'Chess'], relation: 'Myself' },
+  KM1009: { professionCategory: 'Lawyer', interests: ['Dance', 'Reading', 'Music'], relation: 'Daughter' },
+  KM1010: { professionCategory: 'IT / Software', interests: ['Chess', 'Cooking', 'Trekking'], relation: 'Myself' },
+  KM1011: { professionCategory: 'Architect / Designer', interests: ['Yoga', 'Art & Sketching', 'Music'], relation: 'Sister' },
+  KM1012: { professionCategory: 'Business / Entrepreneur', interests: ['Fitness', 'Travel', 'Cooking'], relation: 'Myself' },
+}
+
+export const SEED_PROFILES = RAW_PROFILES.map(p => ({
+  ...p,
+  ...EXTRA[p.id],
+  coords: cityCoords(p.city),
+  createdBy: 'SEED',
+}))
 
 export const PLANS = [
   {

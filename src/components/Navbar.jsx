@@ -10,6 +10,7 @@ export default function Navbar({ page, setPage, onLoginClick }) {
     { id: 'matches', label: 'Matches' },
     { id: 'plans', label: 'Plans' },
   ]
+  if (currentUser && !currentUser.isAdmin) links.push({ id: 'myprofiles', label: 'My Profiles' })
   if (currentUser?.isAdmin) links.push({ id: 'admin', label: 'Admin' })
 
   const go = (id) => { setPage(id); setOpen(false) }

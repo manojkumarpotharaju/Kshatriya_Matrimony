@@ -1,23 +1,40 @@
 import React, { useMemo, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { ChatModal, CallModal } from './Connect'
+import { CITIES, INTERESTS, PROFESSION_CATEGORIES, cityCoords, distanceKm, postedByLabel } from '../data/profiles'
 
 export default function Matches({ setPage, onLoginClick, onToast }) {
   const { profiles, currentUser, canChat, canCall, sendInterest, hasInterest } = useApp()
-  const [gender, setGender] = useState('All')
-  const [city, setCity] = useState('All')
-  const [search, setSearch] = useState('')
+  const [filters, setFilters] = useState({
+    search: '', gender: 'All', ageMin: '', ageMax: '',
+    profession: 'All', interest: 'All', nearCity: 'All', radius: 'Any',
+  })
+  const set = (k) => (e) => setFilters(f => ({ ...f, [k]: e.target.value }))
   const [selected, setSelected] = useState(null)
   const [chatWith, setChatWith] = useState(null)
   const [callWith, setCallWith] = useState(null)
 
-  const cities = useMemo(() => ['All', ...new Set(profiles.map(p => p.city.split(',')[0].trim()))], [profiles])
+  const visible = useMemo(() => profiles.filter(p => p.verified || p.createdBy === currentUser?.id || currentUser?.isAdmin), [profiles, currentUser])
 
-  const filtered = profiles.filter(p =>
-    (gender === 'All' || p.gender === gender) &&
-    (city === 'All' || p.city.startsWith(city)) &&
-    (search === '' || p.name.toLowerCase().includes(search.toLowerCase()) || p.subCaste.toLowerCase().includes(search.toLowerCase()))
-  )
+  const nearCoords = filters.nearCity !== 'All' ? cityCoords(filters.nearCity) : null
+
+  const filtered = visible.filter(p => {
+    const q = filters.search.toLowerCase()
+    if (q && !(p.name.toLowerCase().includes(q) || (p.subCaste || '').toLowerCase().includes(q) || (p.profession || '').toLowerCase().includes(q))) return false
+    if (filters.gender !== 'All' && p.gender !== filters.gender) return false
+    if (filters.ageMin && p.age < Number(filters.ageMin)) return false
+    if (filters.ageMax && p.age > Number(filters.ageMax)) return false
+    if (filters.profession !== 'All' && p.professionCategory !== filters.profession) return false
+    if (filters.interest !== 'All' && !(p.interests || []).includes(filters.interest)) return false
+    if (nearCoords && filters.radius !== 'Any') {
+      const d = distanceKm(nearCoords, p.coords || cityCoords(p.city))
+      if (d === null || d > Number(filters.radius)) return false
+    }
+    return true
+  }).map(p => ({
+    ...p,
+    _distance: nearCoords ? distanceKm(nearCoords, p.coords || cityCoords(p.city)) : null,
+  })).sort((a, b) => (a._distance ?? 1e9) - (b._distance ?? 1e9))
 
   const requirePlan = (action, profile) => {
     if (!currentUser) { onLoginClick(); return }
@@ -47,13 +64,40 @@ export default function Matches({ setPage, onLoginClick, onToast }) {
         </div>
 
         <div className="filters">
-          <input placeholder="Search name or sub-caste…" value={search} onChange={e => setSearch(e.target.value)} />
-          <select value={gender} onChange={e => setGender(e.target.value)}>
+          <input placeholder="Search name, caste or profession…" value={filters.search} onChange={set('search')} />
+          <select value={filters.gender} onChange={set('gender')} aria-label="Gender">
             <option>All</option><option>Female</option><option>Male</option>
           </select>
-          <select value={city} onChange={e => setCity(e.target.value)}>
-            {cities.map(c => <option key={c}>{c}</option>)}
+          <select value={filters.ageMin} onChange={set('ageMin')} aria-label="Minimum age" style={{ minWidth: 110 }}>
+            <option value="">Age from</option>
+            {[18, 21, 24, 27, 30, 33, 36, 40].map(a => <option key={a} value={a}>{a}+</option>)}
           </select>
+          <select value={filters.ageMax} onChange={set('ageMax')} aria-label="Maximum age" style={{ minWidth: 110 }}>
+            <option value="">Age to</option>
+            {[24, 27, 30, 33, 36, 40, 45, 50].map(a => <option key={a} value={a}>up to {a}</option>)}
+          </select>
+          <select value={filters.profession} onChange={set('profession')} aria-label="Profession">
+            <option value="All">All professions</option>
+            {PROFESSION_CATEGORIES.map(p => <option key={p}>{p}</option>)}
+          </select>
+          <select value={filters.interest} onChange={set('interest')} aria-label="Interest">
+            <option value="All">Any interest</option>
+            {INTERESTS.map(i => <option key={i}>{i}</option>)}
+          </select>
+          <select value={filters.nearCity} onChange={set('nearCity')} aria-label="Near city">
+            <option value="All">Anywhere in India</option>
+            {CITIES.map(c => <option key={c.name} value={c.name}>Near {c.name.split(',')[0]}</option>)}
+          </select>
+          {filters.nearCity !== 'All' && (
+            <select value={filters.radius} onChange={set('radius')} aria-label="Distance" style={{ minWidth: 130 }}>
+              <option value="Any">Any distance</option>
+              <option value="50">Within 50 km</option>
+              <option value="100">Within 100 km</option>
+              <option value="250">Within 250 km</option>
+              <option value="500">Within 500 km</option>
+              <option value="1000">Within 1000 km</option>
+            </select>
+          )}
         </div>
 
         <div className="matches-grid">
@@ -68,9 +112,13 @@ export default function Matches({ setPage, onLoginClick, onToast }) {
               </div>
               <div className="match-body">
                 <h3>{p.name}</h3>
-                <div className="match-meta">{p.age} yrs · {p.height} · {p.city}</div>
+                <div className="match-meta">
+                  {p.age} yrs · {p.height} · {p.city}
+                  {p._distance !== null && p._distance !== undefined && <> · <b style={{ color: 'var(--gold)' }}>{p._distance} km away</b></>}
+                </div>
                 <div className="match-sub">{p.subCaste} · {p.gotra}</div>
                 <div className="match-meta">{p.profession}</div>
+                <div className="match-meta" style={{ fontSize: 12, color: 'var(--gold)' }}>✦ {postedByLabel(p.relation)}</div>
                 <div className="match-actions">
                   <button className="btn btn-primary btn-sm" onClick={() => setSelected(p)}>View profile</button>
                   <button className="btn btn-outline btn-sm" onClick={() => interest(p)} disabled={hasInterest(p.id)}>
@@ -120,7 +168,13 @@ function ProfileDetail({ profile: p, onClose, locked, onChat, onCall, onLogin, c
                 <div className={locked ? 'detail-locked' : ''}><dt>Family</dt><dd>{p.family}</dd></div>
                 <div><dt>Diet</dt><dd>{p.diet}</dd></div>
                 <div><dt>Horoscope</dt><dd>{p.horoscope}</dd></div>
+                <div><dt>Posted by</dt><dd>{postedByLabel(p.relation).replace('Posted by ', '')}</dd></div>
               </dl>
+              {(p.interests || []).length > 0 && (
+                <div className="chips" style={{ marginTop: 12 }}>
+                  {p.interests.map(i => <span key={i} className="chip chip-static">{i}</span>)}
+                </div>
+              )}
               <p style={{ marginTop: 14, fontSize: 14.5, color: 'var(--ink-soft)', fontStyle: 'italic' }}>"{p.about}"</p>
 
               {locked ? (
