@@ -18,6 +18,7 @@ export default function Admin({ onToast }) {
 
   const tabs = [
     { id: 'overview', label: '📊 Overview' },
+    { id: 'members', label: '🧑‍🤝‍🧑 Members' },
     { id: 'addProfile', label: '➕ Add profile' },
     { id: 'profiles', label: '👥 Profiles' },
     { id: 'offers', label: '🎁 Offers' },
@@ -37,6 +38,7 @@ export default function Admin({ onToast }) {
           ))}
         </div>
         {tab === 'overview' && <Overview />}
+        {tab === 'members' && <Members />}
         {tab === 'addProfile' && <AddProfile onToast={onToast} onDone={() => setTab('profiles')} />}
         {tab === 'profiles' && <ProfilesTable onToast={onToast} />}
         {tab === 'offers' && <Offers onToast={onToast} />}
@@ -65,6 +67,38 @@ function Overview() {
         Tip: pending <b>cash</b> payments must be approved in the Payments tab before the member's plan activates.
       </div>
     </>
+  )
+}
+
+function Members() {
+  const { users, profiles, PLANS } = useApp()
+  if (!users.length) return (
+    <div className="note-box">
+      No registered users found <b>in this browser</b>. Note: this demo stores data in each visitor's
+      own browser (localStorage) — accounts created on other devices are not visible here.
+      Connect a backend (e.g. Supabase) to see all signups centrally.
+    </div>
+  )
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table className="admin-table">
+        <thead><tr><th>Name</th><th>Email</th><th>Gender</th><th>Plan</th><th>Joined</th><th>Profiles created</th></tr></thead>
+        <tbody>
+          {users.map(u => {
+            const owned = profiles.filter(p => p.createdBy === u.id)
+            const plan = PLANS.find(pl => pl.id === u.plan)
+            return (
+              <tr key={u.id}>
+                <td>{u.name}</td><td>{u.email}</td><td>{u.gender || '—'}</td>
+                <td>{plan ? <span className="pill pill-success">{plan.name}</span> : <span className="pill pill-pending">Free</span>}</td>
+                <td>{u.joined ? new Date(u.joined).toLocaleDateString('en-IN') : '—'}</td>
+                <td>{owned.length ? owned.map(p => `${p.name} (${p.relation || 'Self'})`).join(', ') : '—'}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
