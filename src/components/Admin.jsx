@@ -11,7 +11,7 @@ export default function Admin({ onToast }) {
     return (
       <section className="section"><div className="container" style={{ textAlign: 'center' }}>
         <h2 style={{ color: 'var(--maroon-deep)' }}>Admin access only</h2>
-        <p style={{ color: 'var(--ink-soft)' }}>Sign in with the admin account to manage profiles, offers and payments.</p>
+        <p style={{ color: 'var(--ink-soft)' }}>Sign in with an admin account to manage members, profiles, offers and payments.</p>
       </div></section>
     )
   }
@@ -52,19 +52,22 @@ function Overview() {
   const { profiles, users, payments, offers } = useApp()
   const revenue = payments.filter(p => p.status === 'success').reduce((s, p) => s + p.amount, 0)
   const pendingCash = payments.filter(p => p.status === 'pending').length
+  const pendingProfiles = profiles.filter(p => !p.verified).length
   const premiumMembers = users.filter(u => u.plan).length
   return (
     <>
       <div className="stats-grid">
         <div className="stat-card"><b>{profiles.length}</b><span>Total profiles</span></div>
-        <div className="stat-card"><b>{users.length}</b><span>Registered users</span></div>
+        <div className="stat-card"><b>{pendingProfiles}</b><span>Awaiting verification</span></div>
+        <div className="stat-card"><b>{users.length}</b><span>Registered members</span></div>
         <div className="stat-card"><b>{premiumMembers}</b><span>Paid members</span></div>
         <div className="stat-card"><b>₹{revenue.toLocaleString('en-IN')}</b><span>Revenue</span></div>
         <div className="stat-card"><b>{pendingCash}</b><span>Pending cash payments</span></div>
         <div className="stat-card"><b>{offers.filter(o => o.active).length}</b><span>Live offers</span></div>
       </div>
       <div className="note-box">
-        Tip: pending <b>cash</b> payments must be approved in the Payments tab before the member's plan activates.
+        Workflow: new member profiles land in <b>Profiles</b> as "Pending" → click <b>Verify</b> to publish them.
+        Cash bookings land in <b>Payments</b> as "Pending cash" → click <b>Approve cash</b> to activate the member's plan.
       </div>
     </>
   )
@@ -72,13 +75,7 @@ function Overview() {
 
 function Members() {
   const { users, profiles, PLANS } = useApp()
-  if (!users.length) return (
-    <div className="note-box">
-      No registered users found <b>in this browser</b>. Note: this demo stores data in each visitor's
-      own browser (localStorage) — accounts created on other devices are not visible here.
-      Connect a backend (e.g. Supabase) to see all signups centrally.
-    </div>
-  )
+  if (!users.length) return <p style={{ color: 'var(--ink-soft)' }}>No registered members yet.</p>
   return (
     <div style={{ overflowX: 'auto' }}>
       <table className="admin-table">
@@ -89,7 +86,7 @@ function Members() {
             const plan = PLANS.find(pl => pl.id === u.plan)
             return (
               <tr key={u.id}>
-                <td>{u.name}</td><td>{u.email}</td><td>{u.gender || '—'}</td>
+                <td>{u.name || '—'}{u.isAdmin && ' 👑'}</td><td>{u.email}</td><td>{u.gender || '—'}</td>
                 <td>{plan ? <span className="pill pill-success">{plan.name}</span> : <span className="pill pill-pending">Free</span>}</td>
                 <td>{u.joined ? new Date(u.joined).toLocaleDateString('en-IN') : '—'}</td>
                 <td>{owned.length ? owned.map(p => `${p.name} (${p.relation || 'Self'})`).join(', ') : '—'}</td>
@@ -106,8 +103,9 @@ function AddProfile({ onToast, onDone }) {
   const { addProfile } = useApp()
   return (
     <ProfileForm onToast={onToast} submitLabel="Add profile (verified)"
-      onSubmit={(data) => {
-        addProfile(data, { byAdmin: true })
+      onSubmit={async (data) => {
+        const res = await addProfile(data, { byAdmin: true })
+        if (!res.ok) { onToast('Failed: ' + (res.error || 'try again')); return }
         onToast(`Profile for ${data.name} added & verified ✦`)
         onDone()
       }} />
@@ -128,9 +126,9 @@ function ProfilesTable({ onToast }) {
               <td>{p.verified ? <span className="pill pill-success">Verified</span> : <span className="pill pill-pending">Pending</span>}</td>
               <td style={{ display: 'flex', gap: 6 }}>
                 {!p.verified && (
-                  <button className="btn btn-primary btn-sm" onClick={() => { verifyProfile(p.id); onToast(`${p.name} verified ✓`) }}>Verify</button>
+                  <button className="btn btn-primary btn-sm" onClick={async () => { await verifyProfile(p.id); onToast(`${p.name} verified ✓`) }}>Verify</button>
                 )}
-                <button className="btn btn-ghost btn-sm" onClick={() => { removeProfile(p.id); onToast('Profile removed') }}>Remove</button>
+                <button className="btn btn-ghost btn-sm" onClick={async () => { await removeProfile(p.id); onToast('Profile removed') }}>Remove</button>
               </td>
             </tr>
           ))}
@@ -144,9 +142,9 @@ function Offers({ onToast }) {
   const { offers, addOffer, toggleOffer, removeOffer } = useApp()
   const [form, setForm] = useState({ title: '', discount: 10, code: '', validTill: '' })
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.title || !form.code || !form.validTill) { onToast('Fill all offer fields'); return }
-    addOffer({ ...form, discount: Number(form.discount), code: form.code.toUpperCase() })
+    await addOffer({ ...form, discount: Number(form.discount), code: form.code.toUpperCase() })
     onToast(`Offer ${form.code.toUpperCase()} is live ✦`)
     setForm({ title: '', discount: 10, code: '', validTill: '' })
   }
@@ -163,7 +161,7 @@ function Offers({ onToast }) {
           <div><label>Valid till</label><input type="date" value={form.validTill} onChange={e => setForm(f => ({ ...f, validTill: e.target.value }))} /></div>
         </div>
         <button className="btn btn-gold" onClick={submit}>Launch offer</button>
-        <div className="note-box">The newest <b>active</b> offer is shown in the site banner and auto-applied at checkout. Add a fresh offer any day — yesterday's can be paused or removed below.</div>
+        <div className="note-box">The newest <b>active</b> offer shows in the site banner for every visitor and auto-applies at checkout. Add a fresh offer any day — pause or delete old ones below.</div>
       </div>
       <table className="admin-table">
         <thead><tr><th>Title</th><th>Code</th><th>Discount</th><th>Valid till</th><th>Status</th><th></th></tr></thead>
@@ -202,7 +200,7 @@ function Payments({ onToast }) {
             <td>{p.status === 'success' ? <span className="pill pill-success">Paid</span> : <span className="pill pill-pending">Pending cash</span>}</td>
             <td>
               {p.status === 'pending' && (
-                <button className="btn btn-primary btn-sm" onClick={() => { approveCashPayment(p.id); onToast('Cash received — plan activated for ' + p.userName) }}>
+                <button className="btn btn-primary btn-sm" onClick={async () => { await approveCashPayment(p.id); onToast('Cash received — plan activated for ' + p.userName) }}>
                   Approve cash
                 </button>
               )}

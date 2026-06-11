@@ -64,7 +64,7 @@ function PaymentModal({ plan, onClose, onToast, activeOffer, subscribe, finalAmo
   const [upiId, setUpiId] = useState('')
   const [processing, setProcessing] = useState(false)
 
-  const pay = () => {
+  const pay = async () => {
     if (method === 'card') {
       if (card.number.replace(/\s/g, '').length < 12 || !card.name || !card.expiry || card.cvv.length < 3) {
         onToast('Please fill all card details'); return
@@ -73,19 +73,17 @@ function PaymentModal({ plan, onClose, onToast, activeOffer, subscribe, finalAmo
     if (method === 'upi' && !upiId.includes('@')) { onToast('Enter a valid UPI ID, e.g. name@upi'); return }
 
     setProcessing(true)
-    setTimeout(() => {
-      const details = method === 'card'
-        ? { last4: card.number.slice(-4) }
-        : method === 'upi' ? { upiId } : { note: 'Pay at office counter' }
-      const res = subscribe({ planId: plan.id, method, details })
-      setProcessing(false)
-      if (res.ok) {
-        onToast(method === 'cash'
-          ? 'Booking recorded. Pay cash at our office — admin will activate your plan.'
-          : `🎉 ${plan.name} plan activated. Happy matchmaking!`)
-        onClose()
-      }
-    }, 1400)
+    await new Promise(r => setTimeout(r, 1200))
+    const details = method === 'card'
+      ? { last4: card.number.slice(-4) }
+      : method === 'upi' ? { upiId } : { note: 'Pay at office counter' }
+    const res = await subscribe({ planId: plan.id, method, details })
+    setProcessing(false)
+    if (!res.ok) { onToast('Payment failed: ' + (res.error || 'try again')); return }
+    onToast(method === 'cash'
+      ? 'Booking recorded. Pay cash at our office — admin will activate your plan.'
+      : `🎉 ${plan.name} plan activated. Happy matchmaking!`)
+    onClose()
   }
 
   return (
@@ -170,7 +168,7 @@ function PaymentModal({ plan, onClose, onToast, activeOffer, subscribe, finalAmo
             {processing ? 'Processing…' : method === 'cash' ? `Book plan — pay ₹${finalAmount} at office` : `Pay ₹${finalAmount} securely`}
           </button>
           <p style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'center', marginTop: 10 }}>
-            Demo checkout — no real money is charged. Integrate Razorpay/Stripe for production.
+            Demo checkout — card/UPI are simulated. Integrate Razorpay before charging real money.
           </p>
         </div>
       </div>

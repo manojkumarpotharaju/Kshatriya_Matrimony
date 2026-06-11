@@ -9,7 +9,7 @@ import MyProfiles from './components/MyProfiles'
 import AuthModal from './components/Auth'
 
 export default function App() {
-  const { currentUser } = useApp()
+  const { currentUser, supabaseConfigured } = useApp()
   const [page, setPage] = useState('home')
   const [showAuth, setShowAuth] = useState(false)
   const [toast, setToast] = useState(null)
@@ -25,6 +25,11 @@ export default function App() {
 
   return (
     <>
+      {!supabaseConfigured && (
+        <div className="offer-banner" style={{ background: '#c0392b', color: '#fff' }}>
+          ⚠️ Database not connected — add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (see SUPABASE_SETUP.md)
+        </div>
+      )}
       <Navbar page={page} setPage={setPage} onLoginClick={() => setShowAuth(true)} />
 
       {page === 'home' && <Hero setPage={setPage} onLoginClick={() => setShowAuth(true)} />}
@@ -49,6 +54,7 @@ export default function App() {
               <ul>
                 <li><button className="nav-link" style={{ padding: 0 }} onClick={() => setPage('matches')}>Browse matches</button></li>
                 <li><button className="nav-link" style={{ padding: 0 }} onClick={() => setPage('plans')}>Membership plans</button></li>
+                {currentUser && !currentUser.isAdmin && <li><button className="nav-link" style={{ padding: 0 }} onClick={() => setPage('myprofiles')}>My profiles</button></li>}
                 {currentUser?.isAdmin && <li><button className="nav-link" style={{ padding: 0 }} onClick={() => setPage('admin')}>Admin dashboard</button></li>}
               </ul>
             </div>
